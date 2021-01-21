@@ -47,18 +47,45 @@ class ViewController: UIViewController {
     
     func searchForOpponent() {
         let avatarSize = myAvatar.frame.size
-        let bounceXOffset: CGFloat = avatarSize.width/1.9
+        let bounceXOffset: CGFloat = avatarSize.width / 2 // Точка куда будет двигаться аватар
         let morphSize = CGSize(
             width: avatarSize.width * 0.85,
             height: avatarSize.height * 1.1)
         
         let rightBouncePoint = CGPoint(
-        x: view.frame.size.width/2.0 + bounceXOffset, y: myAvatar.center.y)
+            x: view.frame.size.width/2.0 + bounceXOffset, y: myAvatar.center.y) // получаю центр контроллера + небольшой отступ вправо, чтобы автар не наезжал на левый аватар
         let leftBouncePoint = CGPoint(
-        x: view.frame.size.width/2.0 - bounceXOffset, y: myAvatar.center.y)
+            x: view.frame.size.width/2.0 - bounceXOffset, y: myAvatar.center.y)
         
         myAvatar.bounceOff(point: rightBouncePoint, morphSize: morphSize)
         opponentAvatar.bounceOff(point: leftBouncePoint, morphSize: morphSize)
+        
+        delay(seconds: 4, completion: foundOpponent)
+    }
+    
+    func foundOpponent() {
+        status.text = "Connecting... "
+        
+        opponentAvatar.image = UIImage(named: "avatar-2")
+        opponentAvatar.name = "Tim"
+        
+        delay(seconds: 4.0, completion: connectedToOpponent)
+    }
+    
+    func connectedToOpponent() {
+        myAvatar.shouldTransitionToFinishedState = true
+        opponentAvatar.shouldTransitionToFinishedState = true
+        
+        delay(seconds: 1, completion: completed)
+    }
+    
+    func completed() {
+        status.text = "Ready to play"
+        UIView.animate(withDuration: 0.2) {
+            self.vs.alpha = 1.0
+            self.searchAgain.alpha = 1.0
+        }
     }
 }
+
 

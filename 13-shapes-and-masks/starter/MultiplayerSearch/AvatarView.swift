@@ -31,9 +31,9 @@ class AvatarView: UIView {
     let animationDuration = 1.0
     
     //ui
-    let photoLayer = CALayer()
-    let circleLayer = CAShapeLayer()
-    let maskLayer = CAShapeLayer()
+    let photoLayer = CALayer() // Слой фотографии
+    let circleLayer = CAShapeLayer() // Слой овальной рамки
+    let maskLayer = CAShapeLayer() // Слой маски которая заменяет нам фрейм и позволяет использовать морф эффект
     let label: UILabel = {
         let label = UILabel()
         label.font = UIFont(name: "ArialRoundedMTBold", size: 18.0)
@@ -58,6 +58,7 @@ class AvatarView: UIView {
     }
     
     var shouldTransitionToFinishedState = false
+    var isSquare = false
     
     override func didMoveToWindow() {
         layer.addSublayer(photoLayer)
@@ -69,14 +70,12 @@ class AvatarView: UIView {
     override func layoutSubviews() {
         super.layoutSubviews()
         
-        guard let image = image else {
-            return
-        }
+        guard let image = image else { return }
         
         //Size the avatar image to fit
         photoLayer.frame = CGRect(
-            x: (bounds.size.width - image.size.width + lineWidth)/2,
-            y: (bounds.size.height - image.size.height - lineWidth)/2,
+            x: (bounds.size.width - image.size.width + lineWidth) / 2,
+            y: (bounds.size.height - image.size.height - lineWidth) / 2,
             width: image.size.width,
             height: image.size.height)
         
@@ -94,17 +93,20 @@ class AvatarView: UIView {
         label.frame = CGRect(x: 0.0, y: bounds.size.height + 10.0, width: bounds.size.width, height: 24.0)
     }
     
+    // Функция отвечает за то, на какое расстояние центр аватара переместится и с каким эффектом
     func bounceOff(point: CGPoint, morphSize: CGSize) {
         let originalCenter = center
         UIView.animate(withDuration: animationDuration,
                        delay: 0.0,
-                       usingSpringWithDamping: 0.8,
-                       initialSpringVelocity: 0.0,
+                       usingSpringWithDamping: 0.8, // Определяет «жесткость пружины». Чем выше значение этого параметра (может быть в диапазоне от 0 до 1), тем быстрее «успокоится» анимация.
+                       initialSpringVelocity: 0.0, // Определяет начальную скорость пружины. Значение 1 устанавливает такую скорость анимации, при которой все ее расстояние будет пройдено за одну секунду. Если общее расстояние, на которое перемещается ​view​, равно 100 точкам, то при значении данного параметра 0.7 начальная скорость будет равна 70 точек в секунду.
                        animations: {
                         self.center = point
                        },
                        completion: { _ in
-                        //complete bounce to
+                        if self.shouldTransitionToFinishedState {
+                            self.animateToSquare()
+                        }
                        } )
         
         UIView.animate(withDuration: animationDuration,
@@ -116,9 +118,45 @@ class AvatarView: UIView {
                        },
                        completion: { _ in
                         delay(seconds: 0.1) {
-                            self.bounceOff(point: point, morphSize: morphSize)
+                            if self.isSquare == false {
+                                self.bounceOff(point: point, morphSize: morphSize)
+                            }
                         }
-                       } )
+                       }
+        )
+        
+        let morphedFrame = (originalCenter.x > point.x) ?
+            CGRect(x: 0.0,
+                   y: bounds.height - morphSize.height,
+                   width: morphSize.width,
+                   height: morphSize.height)
+            :
+            CGRect(x: bounds.width - morphSize.width,
+                   y: bounds.height - morphSize.height,
+                   width: morphSize.width,
+                   height: morphSize.height)
+        
+        let morphAnimation = CABasicAnimation(keyPath: "path")
+        morphAnimation.duration = animationDuration
+        morphAnimation.toValue = UIBezierPath(ovalIn: morphedFrame).cgPath
+        morphAnimation.timingFunction = CAMediaTimingFunction(name: .easeOut)
+        
+        circleLayer.add(morphAnimation, forKey: nil)
+        maskLayer.add(morphAnimation, forKey: nil)
+    }
+    
+    func animateToSquare() {
+        isSquare = true
+        let squarePath = CGPath(rect: self.bounds, transform: nil)
+        let bezierPath = UIBezierPath(cgPath: squarePath)
+        let animation = CABasicAnimation(keyPath: "path")
+        animation.duration = 0.25
+        animation.fromValue = circleLayer
+        animation.toValue = bezierPath.cgPath
+        circleLayer.add(animation, forKey: nil)
+        circleLayer.path = squarePath
+        maskLayer.add(animation, forKey: nil)
+        maskLayer.path = squarePath
     }
     
 }
